@@ -1,21 +1,44 @@
 #!/usr/bin/env fish
 
-if test "$argv[1]" = '-g'
-    set group
-    set -e $argv[1]
-end
-
-if test (count $argv) -ne 2
-    echo 'Wrong number of arguments. Usage: ./wsaction.fish [-g] <dispatcher> <workspace>'
+if test (count $argv) -lt 2
+    echo 'Wrong number of arguments. Usage: ./wsaction.fish <dispatcher> <workspace|delta>'
     exit 1
 end
 
-set -l active_ws (hyprctl activeworkspace -j | jq -r '.id')
+set -l action $argv[1]
+set -l param $argv[2]
 
-if set -q group
-    # Move to group
-    hyprctl dispatch $argv[1] (math "($argv[2] - 1) * 10 + $active_ws % 10")
-else
-    # Move to ws in group
-    hyprctl dispatch $argv[1] (math "floor(($active_ws - 1) / 10) * 10 + $argv[2]")
+set -l active_ws (hyprctl activeworkspace -j | jq -r '.id')
+if not string match -r '^[1-5]$' -- "$active_ws"
+    set active_ws 1
+end
+
+switch $action
+    case "workspace"
+        if test $param -ge 1; and test $param -le 5
+            hyprctl dispatch workspace $param
+        end
+
+    case "movetoworkspace"
+        if test $param -ge 1; and test $param -le 5
+            hyprctl dispatch movetoworkspace $param
+        end
+
+    case "workspace_relative"
+        set -l target (math "$active_ws + $param")
+        if test $target -lt 1
+            set target 1
+        else if test $target -gt 5
+            set target 5
+        end
+        hyprctl dispatch workspace $target
+
+    case "movetoworkspace_relative"
+        set -l target (math "$active_ws + $param")
+        if test $target -lt 1
+            set target 1
+        else if test $target -gt 5
+            set target 5
+        end
+        hyprctl dispatch movetoworkspace $target
 end
