@@ -75,6 +75,50 @@ ShellRoot {
                 }
             }
 
+            property string wallpaperFolder: ""
+            property var wallpaperList: []
+            property string wallpaperSource: "file:///home/inferno/.config/quickshell/custom_wallpaper"
+
+            Process {
+                id: folderPickerProc
+                command: ["zenity", "--file-selection", "--directory", "--title=Select Wallpaper Folder"]
+                running: false
+                stdout: StdioCollector {
+                    id: folderCollector
+                    onStreamFinished: {
+                        var chosenPath = folderCollector.text.trim();
+                        if (chosenPath !== "") {
+                            scope.wallpaperFolder = chosenPath;
+                            wallpaperScannerProc.command = ["find", chosenPath, "-maxdepth", "1", "-type", "f", "-name", "*.jpg", "-o", "-name", "*.png", "-o", "-name", "*.jpeg", "-o", "-name", "*.webp"];
+                            wallpaperScannerProc.running = true;
+                        }
+                    }
+                }
+            }
+
+            Process {
+                id: wallpaperScannerProc
+                running: false
+                stdout: StdioCollector {
+                    id: scannerCollector
+                    onStreamFinished: {
+                        var lines = scannerCollector.text.trim().split("\n");
+                        scope.wallpaperList = lines.filter(function(l) { return l.length > 0; });
+                    }
+                }
+            }
+
+            Process {
+                id: wallpaperCopyProc
+                running: false
+                stdout: StdioCollector {}
+                onRunningChanged: {
+                    if (!running) {
+                        scope.wallpaperSource = "file:///home/inferno/.config/quickshell/custom_wallpaper?t=" + Date.now();
+                    }
+                }
+            }
+
             LazyLoader {
                 id: settingsWindowLoader
                 active: false
@@ -82,180 +126,233 @@ ShellRoot {
                 FloatingWindow {
                     id: settingsWindow
                     title: "Caelestia Settings"
-                    implicitWidth: 450
-                    implicitHeight: 350
+                    implicitWidth: 800
+                    implicitHeight: 600
                     visible: true
 
                     onClosed: {
                         settingsWindowLoader.active = false;
                     }
 
-                    color: "#1e1e2e" // Deep dark theme
+                    color: "#0a0a0a" // Super dark editorial theme
 
-                ColumnLayout {
-                    anchors.fill: parent
-                    anchors.margins: 24
-                    spacing: 20
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.margins: 48
+                        spacing: 48
 
-                    Text {
-                        text: "Caelestia System Design"
-                        font.family: "JetBrainsMono Nerd Font"
-                        font.pointSize: 18
-                        font.weight: Font.Bold
-                        color: "#ffffff"
-                        Layout.alignment: Qt.AlignHCenter
-                    }
+                        Text {
+                            text: "CAELESTIA"
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pointSize: 28
+                            font.weight: Font.Bold
+                            font.letterSpacing: 8
+                            color: "#ffffff"
+                        }
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 1
-                        color: "#313244"
-                    }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            spacing: 48
 
-                    Text {
-                        text: "Customize Start Button Icon"
-                        font.family: "JetBrainsMono Nerd Font"
-                        font.pointSize: 12
-                        font.weight: Font.DemiBold
-                        color: "#cdd6f4"
-                    }
+                            // Left Panel: Start Button Config
+                            ColumnLayout {
+                                Layout.preferredWidth: 200
+                                Layout.alignment: Qt.AlignTop
+                                spacing: 24
 
-                    // Preview Area
-                    RowLayout {
-                        spacing: 20
-                        Layout.alignment: Qt.AlignVCenter
-
-                        // Rounded Preview Box
-                        Rectangle {
-                            width: 64
-                            height: 64
-                            radius: 32
-                            color: "#11111b"
-                            border.color: "#3b82f6"
-                            border.width: 2
-
-                            // Preview Text
-                            Text {
-                                text: ""
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pointSize: 28
-                                color: "#ffffff"
-                                anchors.centerIn: parent
-                                visible: previewImage.status !== Image.Ready
-                            }
-
-                            // Preview Custom Image
-                            Item {
-                                anchors.fill: parent
-                                anchors.margins: 2
-                                visible: previewImage.status === Image.Ready
-
-                                Image {
-                                    id: previewImage
-                                    source: scope.customIconSource
-                                    anchors.fill: parent
-                                    fillMode: Image.PreserveAspectCrop
-                                    visible: false
+                                Text {
+                                    text: "ICON"
+                                    font.family: "JetBrainsMono Nerd Font"
+                                    font.pointSize: 10
+                                    font.weight: Font.DemiBold
+                                    font.letterSpacing: 2
+                                    color: "#666666"
                                 }
 
                                 Rectangle {
-                                    id: previewMask
-                                    anchors.fill: parent
-                                    radius: width / 2
-                                    color: "black"
-                                    visible: false
+                                    width: 100
+                                    height: 100
+                                    radius: 50
+                                    color: "#111111"
+                                    border.color: "#333333"
+                                    border.width: 1
+
+                                    Text {
+                                        text: ""
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pointSize: 32
+                                        color: "#ffffff"
+                                        anchors.centerIn: parent
+                                        visible: previewImage.status !== Image.Ready
+                                    }
+
+                                    Item {
+                                        anchors.fill: parent
+                                        anchors.margins: 2
+                                        visible: previewImage.status === Image.Ready
+
+                                        Image {
+                                            id: previewImage
+                                            source: scope.customIconSource
+                                            anchors.fill: parent
+                                            fillMode: Image.PreserveAspectCrop
+                                            visible: false
+                                        }
+
+                                        Rectangle {
+                                            id: previewMask
+                                            anchors.fill: parent
+                                            radius: width / 2
+                                            color: "black"
+                                            visible: false
+                                        }
+
+                                        OpacityMask {
+                                            anchors.fill: parent
+                                            source: previewImage
+                                            maskSource: previewMask
+                                        }
+                                    }
                                 }
 
-                                OpacityMask {
-                                    anchors.fill: parent
-                                    source: previewImage
-                                    maskSource: previewMask
+                                Button {
+                                    id: chooseBtn
+                                    Layout.fillWidth: true
+                                    text: "CHOOSE IMAGE"
+                                    onClicked: filePickerProc.running = true
+                                    
+                                    contentItem: Text {
+                                        text: chooseBtn.text
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pointSize: 9
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 1
+                                        color: "#ffffff"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        implicitHeight: 36
+                                        color: chooseBtn.down ? "#222222" : (chooseBtn.hovered ? "#333333" : "#1a1a1a")
+                                        radius: 4
+                                    }
+                                }
+
+                                Button {
+                                    id: resetBtn
+                                    Layout.fillWidth: true
+                                    text: "RESET"
+                                    onClicked: resetProc.running = true
+                                    
+                                    contentItem: Text {
+                                        text: resetBtn.text
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pointSize: 9
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 1
+                                        color: "#ffffff"
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        implicitHeight: 36
+                                        color: resetBtn.down ? "#441111" : (resetBtn.hovered ? "#552222" : "#331111")
+                                        radius: 4
+                                    }
+                                }
+                                
+                                Item { Layout.fillHeight: true }
+                            }
+
+                            // Right Panel: Wallpaper Engine
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                spacing: 24
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Text {
+                                        text: "WALLPAPER"
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pointSize: 10
+                                        font.weight: Font.DemiBold
+                                        font.letterSpacing: 2
+                                        color: "#666666"
+                                    }
+                                    Item { Layout.fillWidth: true }
+                                    Button {
+                                        id: folderBtn
+                                        text: "SELECT FOLDER"
+                                        onClicked: folderPickerProc.running = true
+                                        
+                                        contentItem: Text {
+                                            text: folderBtn.text
+                                            font.family: "JetBrainsMono Nerd Font"
+                                            font.pointSize: 9
+                                            font.weight: Font.DemiBold
+                                            font.letterSpacing: 1
+                                            color: "#0a0a0a"
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                        }
+                                        background: Rectangle {
+                                            implicitHeight: 32
+                                            implicitWidth: 140
+                                            color: folderBtn.down ? "#cccccc" : (folderBtn.hovered ? "#eeeeee" : "#ffffff")
+                                            radius: 16
+                                        }
+                                    }
+                                }
+
+                                GridView {
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    model: scope.wallpaperList
+                                    cellWidth: 180
+                                    cellHeight: 120
+                                    clip: true
+                                    
+                                    delegate: Item {
+                                        width: 160
+                                        height: 100
+                                        
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            radius: 8
+                                            color: "#111111"
+                                            clip: true
+                                            
+                                            border.color: mouseArea.containsMouse ? "#ffffff" : "transparent"
+                                            border.width: 2
+                                            
+                                            Image {
+                                                anchors.fill: parent
+                                                anchors.margins: 2
+                                                source: "file://" + modelData
+                                                fillMode: Image.PreserveAspectCrop
+                                                asynchronous: true
+                                            }
+                                        }
+                                        
+                                        MouseArea {
+                                            id: mouseArea
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                wallpaperCopyProc.command = ["cp", modelData, "/home/inferno/.config/quickshell/custom_wallpaper"];
+                                                wallpaperCopyProc.running = true;
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
-
-                        ColumnLayout {
-                            spacing: 4
-
-                            Text {
-                                text: "Select any PNG, JPG, or SVG image"
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pointSize: 9
-                                color: "#a6adc8"
-                            }
-
-                            Text {
-                                text: previewImage.status === Image.Ready ? "Custom Icon Active" : "Using Default Windows Logo"
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pointSize: 9
-                                font.weight: Font.DemiBold
-                                color: previewImage.status === Image.Ready ? "#10b981" : "#3b82f6"
-                            }
-                        }
-                    }
-
-                    // Action Buttons
-                    RowLayout {
-                        spacing: 12
-                        Layout.fillWidth: true
-
-                        Button {
-                            id: chooseBtn
-                            Layout.fillWidth: true
-                            text: "Choose Image..."
-                            onClicked: {
-                                filePickerProc.running = true;
-                            }
-                            
-                            contentItem: Text {
-                                text: chooseBtn.text
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pointSize: 10
-                                font.weight: Font.DemiBold
-                                color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            background: Rectangle {
-                                implicitHeight: 36
-                                color: chooseBtn.down ? "#2563eb" : (chooseBtn.hovered ? "#3b82f6" : "#1d4ed8")
-                                radius: 6
-                            }
-                        }
-
-                        Button {
-                            id: resetBtn
-                            Layout.fillWidth: true
-                            text: "Reset to Default"
-                            onClicked: {
-                                resetProc.running = true;
-                            }
-                            
-                            contentItem: Text {
-                                text: resetBtn.text
-                                font.family: "JetBrainsMono Nerd Font"
-                                font.pointSize: 10
-                                font.weight: Font.DemiBold
-                                color: "#ffffff"
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                            }
-
-                            background: Rectangle {
-                                implicitHeight: 36
-                                color: resetBtn.down ? "#991b1b" : (resetBtn.hovered ? "#ef4444" : "#dc2626")
-                                radius: 6
-                            }
-                        }
-                    }
-
-                    Item {
-                        Layout.fillHeight: true
                     }
                 }
             }
-        }
 
         LazyLoader {
             id: wifiConnectionsWindowLoader
@@ -1000,6 +1097,25 @@ ShellRoot {
         }
 
             PanelWindow {
+                id: backgroundWindow
+                screen: scope.modelData
+                anchors.top: true
+                anchors.bottom: true
+                anchors.left: true
+                anchors.right: true
+                exclusiveZone: -1
+
+                WlrLayershell.layer: WlrLayer.Background
+                WlrLayershell.namespace: "quickshell-wallpaper"
+
+                Image {
+                    anchors.fill: parent
+                    source: scope.wallpaperSource
+                    fillMode: Image.PreserveAspectCrop
+                }
+            }
+
+            PanelWindow {
                 id: brightnessScrollOverlay
                 screen: scope.modelData
 
@@ -1029,29 +1145,87 @@ ShellRoot {
                 }
             }
 
+            // Invisible trigger zone at the very bottom edge of the screen
+            PanelWindow {
+                id: taskbarTrigger
+                screen: scope.modelData
+
+                anchors.bottom: true
+                anchors.left: true
+                anchors.right: true
+                implicitHeight: 2 // 2px trigger zone at the very bottom edge
+                exclusiveZone: 0
+
+                WlrLayershell.layer: WlrLayer.Top
+                WlrLayershell.namespace: "quickshell-taskbar-trigger"
+
+                color: "transparent"
+
+                HoverHandler {
+                    id: triggerHoverArea
+                    onHoveredChanged: {
+                        if (hovered) {
+                            taskbar.shouldShow = true;
+                            hideTimer.stop();
+                        } else {
+                            hideTimer.restart();
+                        }
+                    }
+                }
+            }
+
             PanelWindow {
                 id: taskbar
                 screen: scope.modelData
 
+                property bool shouldShow: false
+
                 anchors.bottom: true
-                margins.bottom: 12
+                margins.bottom: shouldShow ? 0 : -48
                 anchors.left: true
-                margins.left: 24
+                margins.left: 0
                 anchors.right: true
-                margins.right: 24
+                margins.right: 0
                 implicitHeight: 48
-                exclusiveZone: 60
+                exclusiveZone: shouldShow ? 48 : 0
+
+                Behavior on margins.bottom {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                }
 
                 WlrLayershell.layer: WlrLayer.Top
                 WlrLayershell.namespace: "quickshell-taskbar"
+                WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
                 color: "transparent"
+
+                // The entire panel area detects hover
+                HoverHandler {
+                    id: taskbarHoverArea
+                    onHoveredChanged: {
+                        if (hovered) {
+                            taskbar.shouldShow = true;
+                            hideTimer.stop();
+                        } else {
+                            hideTimer.restart();
+                        }
+                    }
+                }
+
+                // Small delay before hiding to prevent flicker
+                Timer {
+                    id: hideTimer
+                    interval: 500
+                    onTriggered: {
+                        taskbar.shouldShow = false;
+                    }
+                }
 
                 // Minimalist dark background
                 Rectangle {
                     anchors.fill: parent
                     color: "#b3000000" // Deep elegant dark background with transparency
-                    radius: 24
+                    radius: 0
                 }
 
                 // LEFT: Start Button + Workspaces
@@ -1225,7 +1399,7 @@ ShellRoot {
                                     property int retryCounter: 0
                                     Timer {
                                         interval: 2000
-                                        running: appIcon.source.toString().indexOf("application-x-executable") !== -1 && appIcon.retryCounter < 10
+                                        running: (appIcon.source.toString() === "" || appIcon.source.toString().indexOf("preferences-system-windows") !== -1 || appIcon.source.toString().indexOf("window-new") !== -1) && appIcon.retryCounter < 10
                                         repeat: true
                                         onTriggered: {
                                             appIcon.retryCounter++;
@@ -1236,7 +1410,18 @@ ShellRoot {
                                         // Ensure source re-evaluates if icon lookup fails initially
                                         var _dummy = appIcon.retryCounter;
                                         var _dummy2 = DesktopEntries.applications.count;
-                                        var appClass = toplevel["class"] || toplevel.windowClass || toplevel.appId || (toplevel.lastIpcObject ? toplevel.lastIpcObject.class : "");
+                                        // The class lives inside lastIpcObject (hyprctl clients data)
+                                        // or on the wayland toplevel's appId
+                                        var appClass = "";
+                                        if (toplevel.lastIpcObject) {
+                                            appClass = toplevel.lastIpcObject["class"] || toplevel.lastIpcObject.initialClass || "";
+                                        }
+                                        if (!appClass && toplevel.wayland) {
+                                            appClass = toplevel.wayland.appId || "";
+                                        }
+                                        if (!appClass) {
+                                            appClass = toplevel.appId || toplevel["class"] || toplevel.windowClass || "";
+                                        }
                                         return getAppIconPath(appClass);
                                     }
                                     width: 28
@@ -1528,16 +1713,15 @@ ShellRoot {
                             }
                         }
                     }
-                }
-            }
+                } // close RIGHT RowLayout
+            } // close PanelWindow
 
             // AppIcon mapping helper to resolve absolute system paths from the theme
             function getAppIconPath(appClass) {
                 // Establish a reactive dependency on the DesktopEntries index loading state
                 var _dummy = DesktopEntries.applications.count;
 
-                console.log("RESOLVING ICON FOR:", appClass);
-                if (!appClass) return Quickshell.iconPath("application-x-executable");
+                if (!appClass) return Quickshell.iconPath("preferences-system-windows", true) || Quickshell.iconPath("window-new", true) || "";
 
                 let iconNames = [];
                 
@@ -1552,7 +1736,7 @@ ShellRoot {
                 }
 
                 const lower = appClass.toLowerCase();
-                console.log("LOWER CLASS:", lower, "LOOKUP:", iconNames);
+
                 
                 if (lower.includes("foot") || lower.includes("terminal")) {
                     iconNames.push("utilities-terminal", "terminal", "foot");
@@ -1586,8 +1770,8 @@ ShellRoot {
                     }
                 }
 
-                // Generic fallback if none matched
-                return Quickshell.iconPath("application-x-executable", false);
+                // Fallback to a window icon instead of executable (which looks like settings)
+                return Quickshell.iconPath("preferences-system-windows", true) || Quickshell.iconPath("window-new", true) || "";
             }
         }
     }
