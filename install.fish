@@ -205,6 +205,12 @@ if confirm-overwrite $config/btop
     ln -s (realpath btop) $config/btop
 end
 
+# Quickshell
+if confirm-overwrite $config/quickshell
+    log 'Installing quickshell config...'
+    ln -s (realpath quickshell) $config/quickshell
+end
+
 # Install spicetify
 if set -q _flag_spotify
     log 'Installing spotify (spicetify)...'
