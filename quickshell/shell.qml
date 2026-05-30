@@ -19,6 +19,19 @@ import qs.services
 ShellRoot {
     id: root
 
+    property bool taskbarPinned: false
+
+    GlobalShortcut {
+        name: "toggle_taskbar"
+        onPressed: {
+            root.taskbarPinned = !root.taskbarPinned;
+        }
+    }
+
+    Component.onCompleted: {
+        Quickshell.execDetached(["rm", "-f", "/tmp/caelestia_super_timer_pid"]);
+    }
+
     Variants {
         model: Quickshell.screens
         
@@ -1145,40 +1158,11 @@ ShellRoot {
                 }
             }
 
-            // Invisible trigger zone at the very bottom edge of the screen
-            PanelWindow {
-                id: taskbarTrigger
-                screen: scope.modelData
-
-                anchors.bottom: true
-                anchors.left: true
-                anchors.right: true
-                implicitHeight: 2 // 2px trigger zone at the very bottom edge
-                exclusiveZone: 0
-
-                WlrLayershell.layer: WlrLayer.Top
-                WlrLayershell.namespace: "quickshell-taskbar-trigger"
-
-                color: "transparent"
-
-                HoverHandler {
-                    id: triggerHoverArea
-                    onHoveredChanged: {
-                        if (hovered) {
-                            taskbar.shouldShow = true;
-                            hideTimer.stop();
-                        } else {
-                            hideTimer.restart();
-                        }
-                    }
-                }
-            }
-
             PanelWindow {
                 id: taskbar
                 screen: scope.modelData
 
-                property bool shouldShow: false
+                property bool shouldShow: root.taskbarPinned
 
                 anchors.bottom: true
                 margins.bottom: shouldShow ? 0 : -48
@@ -1198,28 +1182,6 @@ ShellRoot {
                 WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
                 color: "transparent"
-
-                // The entire panel area detects hover
-                HoverHandler {
-                    id: taskbarHoverArea
-                    onHoveredChanged: {
-                        if (hovered) {
-                            taskbar.shouldShow = true;
-                            hideTimer.stop();
-                        } else {
-                            hideTimer.restart();
-                        }
-                    }
-                }
-
-                // Small delay before hiding to prevent flicker
-                Timer {
-                    id: hideTimer
-                    interval: 500
-                    onTriggered: {
-                        taskbar.shouldShow = false;
-                    }
-                }
 
                 // Minimalist dark background
                 Rectangle {
