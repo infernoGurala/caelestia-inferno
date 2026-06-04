@@ -166,7 +166,10 @@ if confirm-overwrite $config/hypr
     log 'Installing hypr* configs...'
     ln -s (realpath hypr) $config/hypr
     chmod u+x $config/hypr/scripts/wsaction.fish
+    chmod u+x $config/hypr/scripts/select-stylus.fish
+    chmod u+x $config/hypr/scripts/configs.fish
     hyprctl reload
+
 end
 
 # Starship
